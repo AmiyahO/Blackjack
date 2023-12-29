@@ -52,12 +52,17 @@ namespace Blackjack
         private int playerBalance;
         private int bankBalance;
 
+        private int visiblePlayerCards;
+        private int visibleDealerCards;
+
         public Form1()
         {
             InitializeComponent();
             blackjackGame = new BlackjackGame();
             playerBalance = MaxStartingAmount;
             bankBalance = 1000;
+            visiblePlayerCards = 0;
+            visibleDealerCards = 0;
 
             playerPictureBoxes = new PictureBox[] { pictureBox1Player, pictureBox2Player, pictureBox3Player, pictureBox4Player, pictureBox5Player, pictureBox6Player, pictureBox7Player, pictureBox8Player, pictureBox9Player, pictureBox10Player, pictureBox11Player };
             dealerPictureBoxes = new PictureBox[] { pictureBox1Dealer, pictureBox2Dealer, pictureBox3Dealer, pictureBox4Dealer, pictureBox5Dealer, pictureBox6Dealer, pictureBox7Dealer, pictureBox8Dealer, pictureBox9Dealer, pictureBox10Dealer, pictureBox11Dealer };
@@ -78,6 +83,8 @@ namespace Blackjack
         private void StartGame()
         {
             blackjackGame.StartGame();
+            visiblePlayerCards = 2;
+            visibleDealerCards = 1;
 
             // Check if the player can double down
             if (blackjackGame.PlayerHand.CalculateScore() >= 9 && blackjackGame.PlayerHand.CalculateScore() <= 11)
@@ -116,12 +123,22 @@ namespace Blackjack
         private void UpdatePlayerPictureBoxes()
         {
             // Display player's cards using PictureBox controls
-            for (int i = 0; i < blackjackGame.PlayerHand.Cards.Count; i++)
+            for (int i = 0; i < visiblePlayerCards; i++)
             {
                 if (i < playerPictureBoxes.Length)
                 {
                     playerPictureBoxes[i].Image = blackjackGame.PlayerHand.Cards[i].CardImage;
                     playerPictureBoxes[i].SizeMode = PictureBoxSizeMode.StretchImage;
+                    playerPictureBoxes[i].Visible = true; // Make the PictureBox visible
+                }
+            }
+
+            // Hide remaining player PictureBoxes
+            for (int i = visiblePlayerCards; i < playerPictureBoxes.Length; i++)
+            {
+                if (i < playerPictureBoxes.Length)
+                {
+                    playerPictureBoxes[i].Visible = false;
                 }
             }
         }
@@ -129,13 +146,22 @@ namespace Blackjack
         private void UpdateDealerPictureBoxes()
         {
             // Display dealer's cards using PictureBox controls
-            for (int i = 0; i < blackjackGame.DealerHand.Cards.Count; i++)
+            for (int i = 0; i < visibleDealerCards; i++)
             {
                 if (i < dealerPictureBoxes.Length)
                 {
                     dealerPictureBoxes[i].Image = blackjackGame.DealerHand.Cards[i].CardImage;
                     dealerPictureBoxes[i].SizeMode = PictureBoxSizeMode.StretchImage;
+                    dealerPictureBoxes[i].Visible = true; // Make the PictureBox visible
+                }
+            }
 
+            // Hide remaining dealer PictureBoxes
+            for (int i = visibleDealerCards; i < dealerPictureBoxes.Length; i++)
+            {
+                if (i < dealerPictureBoxes.Length)
+                {
+                    dealerPictureBoxes[i].Visible = false;
                 }
             }
         }
@@ -168,6 +194,11 @@ namespace Blackjack
                 UpdateBalances();
                 DisablePlayerButtons();
             }
+            else
+            {
+                // Increment the number of visible player cards
+                visiblePlayerCards++;
+            }
         }
 
         private void btnStick_Click(object sender, EventArgs e)
@@ -182,6 +213,9 @@ namespace Blackjack
             blackjackGame.DetermineWinner();
             UpdateBalances();
             DisablePlayerButtons();
+
+            // Set the number of visible dealer cards based on the actual number of dealer cards
+            visibleDealerCards = blackjackGame.DealerHand.Cards.Count;
         }
 
         private void btnDoubleDown_Click(object sender, EventArgs e)
