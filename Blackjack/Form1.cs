@@ -1,15 +1,8 @@
 ﻿using Blackjack.Properties;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static Blackjack.Deck;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 
 namespace Blackjack
 {
@@ -48,16 +41,26 @@ namespace Blackjack
 
         private const int MinBet = 2;
         private const int MaxBet = 100;
-        private const int MaxStartingAmount = 50;
+        private const int MaxStartingBet = 50;
         private int playerBalance;
         private int bankBalance;
+        public int gamesWon;
+        public int gamesLost;
+        public int gamesTied;
+        public int totalGamesPlayed;
+        private int splitsRemaining;  // Variable to track the number of splits remaining
 
         public Form1()
         {
             InitializeComponent();
-            blackjackGame = new BlackjackGame();
-            playerBalance = MaxStartingAmount;
-            bankBalance = 1000;
+            blackjackGame = new BlackjackGame(this);
+            playerBalance = 1000;
+            bankBalance = 1000000;
+            gamesWon = 0;
+            gamesLost = 0;
+            gamesTied = 0;
+            totalGamesPlayed = 0;
+            splitsRemaining = 2; // Initialize the number of splits for the new hand
 
             playerPictureBoxes = new PictureBox[] { pictureBox1Player, pictureBox2Player, pictureBox3Player, pictureBox4Player, pictureBox5Player, pictureBox6Player, pictureBox7Player, pictureBox8Player, pictureBox9Player, pictureBox10Player, pictureBox11Player };
             dealerPictureBoxes = new PictureBox[] { pictureBox1Dealer, pictureBox2Dealer, pictureBox3Dealer, pictureBox4Dealer, pictureBox5Dealer, pictureBox6Dealer, pictureBox7Dealer, pictureBox8Dealer, pictureBox9Dealer, pictureBox10Dealer, pictureBox11Dealer };
@@ -83,6 +86,16 @@ namespace Blackjack
             if (blackjackGame.PlayerHand.CalculateScore() >= 9 && blackjackGame.PlayerHand.CalculateScore() <= 11)
             {
                 btnDoubleDown.Enabled = true;
+            }
+
+            // Check if the player has a pair for splitting
+            if (blackjackGame.PlayerHand.Cards.Count == 2 && blackjackGame.PlayerHand.Cards[0].Rank == blackjackGame.PlayerHand.Cards[1].Rank)
+            {
+                // Check if the pair is eligible for splitting
+                if (IsEligibleForSplit(blackjackGame.PlayerHand.Cards[0]))
+                {
+                    btnSplit.Enabled = true;
+                }
             }
 
             // Update PictureBoxes and labels
@@ -213,13 +226,46 @@ namespace Blackjack
 
         private void btnSplit_Click(object sender, EventArgs e)
         {
+            if (splitsRemaining > 0)
+            {
+                // Deduct the second bet from the player's balance
+                playerBalance -= blackjackGame.PlayerBet;
 
+                // Update the balances
+                UpdateBalances();
+
+                // Disable the Split button after splitting twice
+                if (--splitsRemaining == 0)
+                {
+                    btnSplit.Enabled = false;
+                }
+
+                // Create a new hand for the split cards
+                Hand splitHand = new Hand();
+
+                // Add one card from the original hand to the new hand
+                splitHand.AddCard(blackjackGame.PlayerHand.Cards[1]);
+                blackjackGame.PlayerHand.Cards.RemoveAt(1);
+
+                // Update PictureBoxes and scores
+                UpdatePictureBoxes();
+                UpdateScores();
+
+                // Determine the winner for the original hand (if applicable)
+                blackjackGame.DetermineWinner();
+
+                // Continue the game with the new split hand
+                blackjackGame.PlayerHand = splitHand;
+
+                // Start the game for the split hand
+                StartGame();
+            }
         }
 
         private void btnReset_Click(object sender, EventArgs e)
         {
             // Reset the game
-            blackjackGame = new BlackjackGame();
+            blackjackGame = new BlackjackGame(this);
 
             // Clear the bet TextBox
             txtBet.Text = string.Empty;
@@ -235,11 +281,11 @@ namespace Blackjack
             UpdateScores();
 
             // Reset player's balance
-            playerBalance = MaxStartingAmount;
+            playerBalance = 1000;
             lblBalance.Text = $"Balance: £{playerBalance}";
 
             // Reset bank balance
-            bankBalance = 1000;
+            bankBalance = 1000000;
             lblBank.Text = $"Bank: £{bankBalance}";
 
             btnStart.Enabled = false;
@@ -248,6 +294,11 @@ namespace Blackjack
             btnSplit.Enabled = false;
             btnDoubleDown.Enabled = false;
             btnReset.Enabled = false;
+
+            gamesWon = 0;
+            gamesLost = 0;
+            gamesTied = 0;
+            totalGamesPlayed = 0;
         }
 
         private void ClearPictureBoxes()
@@ -277,6 +328,10 @@ namespace Blackjack
                 {
                     MessageBox.Show("Insufficient balance. Please enter a lower bet.", "Insufficient Balance");
                 }
+                /*else if (!btnStart.Enabled && betAmount > MaxStartingBet)
+                {
+                    MessageBox.Show($"Invalid bet amount. Initial bet can be maximum £50. Please enter a bet between £{MinBet} and £{MaxStartingBet} in multiples of £1.", "Invalid Bet");
+                }*/
                 else
                 {
                     // Set the player's bet in the BlackjackGame instance
@@ -297,7 +352,7 @@ namespace Blackjack
             }
             else
             {
-                MessageBox.Show($"Invalid bet amount. Please enter a bet between {MinBet} and {MaxBet} in multiples of £1.", "Invalid Bet");
+                MessageBox.Show($"Invalid bet amount. Please enter a bet between £{MinBet} and £{MaxBet} in multiples of £1.", "Invalid Bet");
             }
         }
 
@@ -308,7 +363,7 @@ namespace Blackjack
 
         private void DisablePlayerButtons()
         {
-            // Disable twist, stick, double down, and split buttons
+            // Disable buttons
             btnTwist.Enabled = false;
             btnStick.Enabled = false;
             btnDoubleDown.Enabled = false;
@@ -318,8 +373,10 @@ namespace Blackjack
 
         private void btnContinue_Click(object sender, EventArgs e)
         {
+            btnContinue.Enabled = false;
+
             // Reset the game
-            blackjackGame = new BlackjackGame();
+            blackjackGame = new BlackjackGame(this);
 
             // Clear images in PictureBoxes
             ClearPictureBoxes();
@@ -343,6 +400,39 @@ namespace Blackjack
             lblBalance.Text = $"Balance: £{playerBalance}";
             lblBank.Text = $"Bank: £{bankBalance}";
         }
+
+        private bool IsEligibleForSplit(Card card)
+        {
+            // Check if the card is not a 5 or 10
+            return card.Rank != Rank.Five && card.Rank != Rank.Ten;
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Programmer: Amirah Yahaya", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void howToPlayToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            HowToPlay gameInstructions = new HowToPlay();
+            gameInstructions.ShowDialog();
+        }
+
+        private void scoreboardToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Scoreboard scoreboard = new Scoreboard();
+
+            int playerScore = (int)blackjackGame.PlayerHand.CalculateScore();
+            int dealerScore = (int)blackjackGame.DealerHand.CalculateScore();
+
+            scoreboard.UpdateScores(playerScore, dealerScore, gamesWon, gamesLost, gamesTied, totalGamesPlayed);
+            scoreboard.ShowDialog();
+        }
     }
 
     public class Card
@@ -351,7 +441,7 @@ namespace Blackjack
         public Rank Rank { get; }
         public Image CardImage { get; }
 
-        public Card (Suit suit, Rank rank, Image cardImage) 
+        public Card(Suit suit, Rank rank, Image cardImage)
         {
             Suit = suit;
             Rank = rank;
@@ -509,15 +599,18 @@ namespace Blackjack
 
     public class BlackjackGame
     {
-        private Deck deck ;
+        private Form1 form1;
+
+        private Deck deck;
         public Hand DealerHand { get; }
-        public Hand PlayerHand { get; }
+        public Hand PlayerHand { get; set; }
         public int PlayerBet { get; set; }
         public int PlayerBalance { get; set; }
         public int BankBalance { get; set; }
 
-        public BlackjackGame()
+        public BlackjackGame(Form1 form)
         {
+            form1 = form;
             deck = new Deck();
             DealerHand = new Hand();
             PlayerHand = new Hand();
@@ -563,6 +656,7 @@ namespace Blackjack
                 {
                     MessageBox.Show("It's a draw! Both have blackjack.", "Game Over");
                     PlayerBalance += PlayerBet;
+                    GameTied();
                     return;
                 }
 
@@ -570,6 +664,7 @@ namespace Blackjack
                 MessageBox.Show("You win with blackjack!", "Game Over");
                 PlayerBalance += (int)(PlayerBet * 2.5);
                 BankBalance -= (int)(PlayerBet * 1.5);
+                GameWon();
                 return;
             }
 
@@ -578,6 +673,7 @@ namespace Blackjack
             {
                 MessageBox.Show("You lose!", "Game Over");
                 BankBalance += PlayerBet;
+                GameLost();
                 return;
             }
 
@@ -595,6 +691,7 @@ namespace Blackjack
                 MessageBox.Show("You win!", "Game Over");
                 PlayerBalance += PlayerBet * 2;
                 BankBalance -= PlayerBet;
+                GameWon();
                 return;
             }
 
@@ -603,17 +700,20 @@ namespace Blackjack
             {
                 MessageBox.Show("You lose!", "Game Over");
                 BankBalance += PlayerBet;
+                GameLost();
             }
             else if (playerScore > dealerScore || playerScore == 21)
             {
                 MessageBox.Show("You win!", "Game Over");
                 PlayerBalance += PlayerBet * 2;
                 BankBalance -= PlayerBet;
+                GameWon();
             }
             else if (playerScore == dealerScore)
             {
                 MessageBox.Show("It's a draw!", "Game Over");
                 PlayerBalance += PlayerBet;
+                GameTied();
             }
             else
             {
@@ -622,13 +722,36 @@ namespace Blackjack
                     MessageBox.Show("You win!", "Game Over");
                     PlayerBalance += PlayerBet * 2;
                     BankBalance -= PlayerBet;
+                    GameWon();
                 }
                 else if (dealerScore == 21 && (playerScore < 21 || playerScore > 21))
                 {
                     MessageBox.Show("You lose!", "Game Over");
                     BankBalance += PlayerBet;
+                    GameLost();
                 }
             }
+        }
+
+        private void GameWon()
+        {
+            form1.gamesWon++;
+            form1.totalGamesPlayed++;
+            // Additional logic or updates as needed
+        }
+
+        private void GameLost()
+        {
+            form1.gamesLost++;
+            form1.totalGamesPlayed++;
+            // Additional logic or updates as needed
+        }
+
+        private void GameTied()
+        {
+            form1.gamesTied++;
+            form1.totalGamesPlayed++;
+            // Additional logic or updates as needed
         }
     }
 }
