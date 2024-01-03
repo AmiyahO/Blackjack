@@ -1,4 +1,10 @@
-﻿using Blackjack.Properties;
+﻿/* 
+ * Filename: HowToPlay.cs
+ * Author: Amirah Yahaya
+ * Date created: 26 December 2023
+ * Description: Form for displaying a tutorial on how to play the Blackjack game.
+ */
+using Blackjack.Properties;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,15 +20,15 @@ namespace Blackjack
     public partial class HowToPlay : Form
     {
         private int currentPage = 0;
-        private List<Image> screenshots = new List<Image>();  // Add your screenshots to this list
+        private List<Image> screenshots = new List<Image>();  // list to store screenshots
 
         public HowToPlay()
         {
             InitializeComponent();
 
             // Load screenshots into the list
-            int numberOfScreenshots = 17; // Adjust this based on the actual number of screenshots
-            for (int i = 1; i <= numberOfScreenshots; i++)
+            int noOfScreenshots = 17; // number of screenshots
+            for (int i = 1; i <= noOfScreenshots; i++)
             {
                 screenshots.Add(Properties.Resources.ResourceManager.GetObject($"screenshot{i}") as Image);
 
@@ -57,7 +63,7 @@ namespace Blackjack
 
         private void UpdatePageLabel()
         {
-            // Update the label to show current page and total pages
+            // Update the label to show the current page and total pages
             lblPages.Text = $"Page {currentPage + 1} of {screenshots.Count}";
         }
     }

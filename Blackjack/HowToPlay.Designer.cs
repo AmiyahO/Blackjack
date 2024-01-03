@@ -70,6 +70,7 @@
             // 
             // lblPages
             // 
+            this.lblPages.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblPages.Location = new System.Drawing.Point(588, 666);
             this.lblPages.Name = "lblPages";
             this.lblPages.Size = new System.Drawing.Size(162, 42);
